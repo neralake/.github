@@ -2,7 +2,7 @@
 name: Feature Template
 about: New features with description and acceptance criteria
 title: ''
-labels: ''
+labels: 'enhancement'
 assignees: ''
 ---
 

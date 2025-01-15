@@ -2,7 +2,7 @@
 name: Bug Template
 about: Bug with behavior expectations and reproducibility.
 title: ''
-labels: ''
+labels: 'bug'
 assignees: ''
 ---
 
