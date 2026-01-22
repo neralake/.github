@@ -1,6 +1,6 @@
 ## 📝 Description
 <!-- Explain what you did. Why is this change necessary? What problem does it solve? -->
-<!-- Link to the JIRA ticket / GitHub Issue / Asana card here: -->
+<!-- Link to the Shortcut here: -->
 
 ## 🎯 Scope of Change
 <!-- Select the type of change (put an x in the brackets) -->
