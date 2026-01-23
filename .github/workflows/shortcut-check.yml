@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify Shortcut Ticket Exists
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           SHORTCUT_TOKEN: ${{ secrets.SHORTCUT_API_TOKEN }}
         with:
