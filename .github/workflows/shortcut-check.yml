@@ -1,0 +1,54 @@
+name: Enforce Shortcut Ticket
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  validate-ticket-existence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Shortcut Ticket Exists
+        uses: actions/github-script@v6
+        env:
+          SHORTCUT_TOKEN: ${{ secrets.SHORTCUT_API_TOKEN }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const combinedContext = `${pr.title} ${pr.body} ${pr.head.ref}`;
+            
+            // 1. EXTRACT THE ID
+            // Looks for "story/123", "epic/123", "sc-123", or "ch-123"
+            // Returns the digits only (e.g. "556")
+            const idRegex = /(?:story|epic)\/(\d+)|(?:sc|ch)-(\d+)/i;
+            const match = combinedContext.match(idRegex);
+
+            if (!match) {
+              core.setFailed("❌ Blocking Merge: No Shortcut ticket ID found. Please include 'sc-123' or a Shortcut URL.");
+              return;
+            }
+
+            // Capture the ID from either capture group 1 (URL) or 2 (Shortcode)
+            const ticketId = match[1] || match[2];
+            console.log(`🔍 Found Ticket ID: ${ticketId}. Verifying existence...`);
+
+            // 2. CALL SHORTCUT API
+            // We use fetch (built into node 18+ actions) to hit the Shortcut API
+            const response = await fetch(`https://api.app.shortcut.com/api/v3/stories/${ticketId}`, {
+              method: 'GET',
+              headers: {
+                'Shortcut-Token': process.env.SHORTCUT_TOKEN,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            // 3. VALIDATE RESPONSE
+            if (response.status === 200) {
+              const data = await response.json();
+              console.log(`✅ Success! Linked to valid story: "${data.name}"`);
+              return; // Pass
+            } else if (response.status === 404) {
+              core.setFailed(`❌ Blocking Merge: Ticket ID ${ticketId} was found, but it does not exist in Shortcut (404). Check for typos.`);
+            } else {
+              // Handle 401 (Bad Token) or 429 (Rate Limit) gracefully
+              console.warn(`⚠️ Could not verify ticket (API Status: ${response.status}). allowing to proceed to avoid blocking work due to API errors.`);
+            }

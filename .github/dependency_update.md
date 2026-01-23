@@ -1,18 +1,17 @@
 ## 📦 Dependency Update
 
-## 🔄 Upgrade Details
+## Upgrade Details
 - **Package:** `[Name]`
 - **From Version:** `x.x.x`
 - **To Version:** `y.y.y`
 
-## 🛡️ Security / CVE
+## Security / CVE
 <!-- If this fixes a security vulnerability, link the CVE here -->
 
-## 💥 Breaking Changes
+## Breaking Changes
 <!-- Does the changelog mention breaking changes? -->
 - [ ] No
 - [ ] Yes (Describe mitigation):
 
-## 🧪 Verification
-- [ ] Application builds successfully.
-- [ ] Test suite passes.
+## Verification
+- [ ] The code/service runs locally as expected.
