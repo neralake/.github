@@ -1,7 +1,9 @@
 name: Enforce Shortcut Ticket
 on:
-  pull_request:
-    types: [opened, edited, reopened, synchronize]
+  workflow_call:
+    secrets:
+      SHORTCUT_API_TOKEN:
+        required: true
 
 jobs:
   validate-ticket-existence:
