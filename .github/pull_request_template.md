@@ -1,8 +1,6 @@
 ## 📝 Description
 <!-- Explain what you did. Why is this change necessary? What problem does it solve? -->
-<!-- Link to the Shortcut ticket here. Example: https://app.shortcut.com/neralake/story/12345/the-story-title-->
-<!-- Alternatively, the sShortcut ticket ID. Example: [sc-12345] -->
-[sc-XXXX]
+<!-- Add the Link to the Shortcut ticket here. -->
 
 ## Scope of Change
 <!-- Select the type of change (put an x in the brackets) -->
