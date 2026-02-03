@@ -9,17 +9,6 @@ jobs:
   validate-ticket-existence:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Shortcut Ticket Existsname: Enforce Shortcut Ticket
-on:
-  workflow_call:
-    secrets:
-      SHORTCUT_API_TOKEN:
-        required: true
-
-jobs:
-  validate-ticket-existence:
-    runs-on: ubuntu-latest
-    steps:
       - name: Verify Shortcut Ticket Exists
         uses: actions/github-script@v7
         env:
