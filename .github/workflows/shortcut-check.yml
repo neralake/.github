@@ -10,35 +10,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify Shortcut Ticket Exists
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           SHORTCUT_TOKEN: ${{ secrets.SHORTCUT_API_TOKEN }}
         with:
           script: |
             const pr = context.payload.pull_request;
-            
+
             // 1. DEFINE REGEX
             // Group 1: story/123 or epic/123
             // Group 2: sc-123 or ch-123
             // Group 3: 123/ (at start of string only)
             const idRegex = /(?:story|epic)\/(\d+)|(?:sc|ch)-(\d+)|^(\d+)\//i;
-            
+
             let ticketId = null;
 
             // 2. PRIORITY CHECK: Branch Name
             const branchMatch = pr.head.ref.match(idRegex);
-            
+
             if (branchMatch) {
               // Check all 3 capture groups
               ticketId = branchMatch[1] || branchMatch[2] || branchMatch[3];
               console.log(`🔍 Found Ticket ID in Branch Name: ${ticketId}`);
-            } 
+            }
             // 3. SECONDARY CHECK: PR Title & Description
             else {
               console.log("ℹ️ No ID found in branch name. Checking PR description and title...");
               const textContext = `${pr.title} ${pr.body || ''}`;
               const textMatch = textContext.match(idRegex);
-              
+
               if (textMatch) {
                 ticketId = textMatch[1] || textMatch[2] || textMatch[3];
                 console.log(`🔍 Found Ticket ID in PR Description/Title: ${ticketId}`);
