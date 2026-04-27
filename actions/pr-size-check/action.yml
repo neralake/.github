@@ -1,0 +1,45 @@
+name: PR Size Check
+description: Fails if a pull request exceeds the maximum allowed lines changed (additions + deletions).
+
+inputs:
+  max_lines_changed:
+    description: Maximum total lines changed (additions + deletions) before the check fails.
+    required: false
+    default: "1200"
+  github_token:
+    description: GitHub token used to fetch PR diff stats.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check PR size
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        MAX_LINES: ${{ inputs.max_lines_changed }}
+      run: |
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+
+        if [ -z "$PR_NUMBER" ]; then
+          echo "::error::No pull request number found. This action must run on a pull_request event."
+          exit 1
+        fi
+
+        STATS=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUMBER" --jq '{additions, deletions}')
+        ADDITIONS=$(echo "$STATS" | jq '.additions')
+        DELETIONS=$(echo "$STATS" | jq '.deletions')
+        TOTAL=$((ADDITIONS))
+
+        echo "Additions: $ADDITIONS"
+        echo "Deletions: $DELETIONS"
+        echo "Total lines changed: $TOTAL"
+        echo "Max allowed additions: $MAX_LINES"
+
+        if [ "$TOTAL" -gt "$ADDITIONS" ]; then
+          echo "::error::PR has $TOTAL lines changed, which exceeds the limit of $MAX_LINES. Please break this PR into smaller changes."
+          exit 1
+        fi
+
+        echo "PR size is within the limit."
