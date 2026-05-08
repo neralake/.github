@@ -1,6 +1,6 @@
 ## 📝 Description
 <!-- Explain what you did. Why is this change necessary? What problem does it solve? -->
-<!-- Add the Link to the Shortcut ticket here. -->
+<!-- Add sc-### to automatically link the Shortcut ticket. -->
 
 ## Scope of Change
 <!-- Select the type of change (put an x in the brackets) -->
