@@ -1,0 +1,60 @@
+name: Trivy Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-ref:
+        description: 'Path within the repository to scan (default: repo root)'
+        required: false
+        type: string
+        default: '.'
+      severity:
+        description: 'Comma-separated severities to report (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)'
+        required: false
+        type: string
+        default: 'CRITICAL,HIGH'
+      exit-code:
+        description: 'Exit code when findings exist: 0 = advisory only, 1 = fail the job'
+        required: false
+        type: number
+        default: 0
+      ignore-unfixed:
+        description: 'Ignore vulnerabilities with no available fix'
+        required: false
+        type: boolean
+        default: true
+      trivy-version:
+        description: 'Trivy version to use'
+        required: false
+        type: string
+        default: '0.61.0'
+
+jobs:
+  trivy-scan:
+    name: Trivy Filesystem Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: 'fs'
+          scan-ref: ${{ inputs.scan-ref }}
+          trivy-version: ${{ inputs.trivy-version }}
+          severity: ${{ inputs.severity }}
+          exit-code: ${{ inputs.exit-code }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'
