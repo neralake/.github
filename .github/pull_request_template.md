@@ -1,6 +1,6 @@
 ## 📝 Description
 <!-- Explain what you did. Why is this change necessary? What problem does it solve? -->
-<!-- Add sc-### to automatically link the Shortcut ticket. -->
+<!-- Add link or number of the Shortcut ticket, if not in the branch name. -->
 
 ## Scope of Change
 <!-- Select the type of change (put an x in the brackets) -->
