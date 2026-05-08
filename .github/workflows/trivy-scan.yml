@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: true
+      package-manager:
+        description: 'Install dependencies before scanning: npm, pip, none'
+        required: false
+        type: string
+        default: 'none'
       # trivy-version:
       #   description: 'Trivy version to use'
       #   required: false
@@ -46,6 +51,16 @@ jobs:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: trivy-db-${{ runner.os }}-
+
+      - name: Install dependencies (npm)
+        if: inputs.package-manager == 'npm'
+        run: npm ci --ignore-scripts
+
+      # This is just an example for Python projects.
+      # Customize this step for other package managers as needed, such as pnpm.
+      - name: Install dependencies (pip)
+        if: inputs.package-manager == 'pip'
+        run: pip install -r requirements.txt
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
