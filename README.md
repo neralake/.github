@@ -48,6 +48,7 @@ jobs:
   trivy:
     uses: neralake/.github/.github/workflows/trivy-scan.yml@main
     permissions:
+      actions: read
       contents: read
       security-events: write
 ```
@@ -69,6 +70,7 @@ jobs:
   trivy:
     uses: neralake/.github/.github/workflows/trivy-scan.yml@main
     permissions:
+      actions: read
       contents: read
       security-events: write
     with:
