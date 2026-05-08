@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: 'none'
+      node-version:
+        description: 'Node.js version to use when package-manager is npm'
+        required: false
+        type: string
+        default: 'lts/*'
     secrets:
       node-auth-token:
         description: 'Token for authenticating with private npm registries'
@@ -51,6 +56,12 @@ jobs:
           key: trivy-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: trivy-db-${{ runner.os }}-
 
+      - name: Setup Node.js
+        if: inputs.package-manager == 'npm'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+
       - name: Install dependencies (npm)
         if: inputs.package-manager == 'npm'
         run: npm ci --ignore-scripts
@@ -72,3 +83,5 @@ jobs:
           exit-code: ${{ inputs.exit-code }}
           ignore-unfixed: ${{ inputs.ignore-unfixed }}
           format: 'table'
+        env:
+          TRIVY_GITIGNORE: 'false'
