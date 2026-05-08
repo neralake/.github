@@ -1,0 +1,55 @@
+name: Trivy Security Scan
+description: Scans the repository for secrets and vulnerabilities using Trivy.
+
+inputs:
+  scan-ref:
+    description: 'Path to scan for secrets'
+    required: false
+    default: '.'
+  vuln-scan-ref:
+    description: 'Path to scan for vulnerabilities (defaults to scan-ref)'
+    required: false
+    default: ''
+  severity:
+    description: 'Comma-separated severities to report (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)'
+    required: false
+    default: 'CRITICAL,HIGH'
+  exit-code:
+    description: 'Exit code when findings exist: 0 = advisory only, 1 = fail the job'
+    required: false
+    default: '0'
+  ignore-unfixed:
+    description: 'Ignore vulnerabilities with no available fix'
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Trivy vulnerability database
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/trivy
+        key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+        restore-keys: trivy-db-${{ runner.os }}-
+
+    - name: Scan source code for secrets
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        scan-type: 'fs'
+        scan-ref: ${{ inputs.scan-ref }}
+        scanners: 'secret'
+        cache-dir: ~/.cache/trivy
+        format: 'table'
+
+    - name: Scan for vulnerabilities
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        scan-type: 'fs'
+        scan-ref: ${{ inputs.vuln-scan-ref || inputs.scan-ref }}
+        scanners: 'vuln'
+        severity: ${{ inputs.severity }}
+        exit-code: ${{ inputs.exit-code }}
+        ignore-unfixed: ${{ inputs.ignore-unfixed }}
+        cache-dir: ~/.cache/trivy
+        format: 'table'

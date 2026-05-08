@@ -27,11 +27,11 @@ jobs:
 
 ---
 
+## Reusable Actions
+
 ### `trivy-scan` — Security Scanning
 
-Runs a Trivy filesystem scan for vulnerabilities, exposed secrets, and IaC misconfigurations. Uploads results as SARIF to the repository's Security tab.
-
-Runs on pull requests to `main` and on every push to feature branches.
+Runs two Trivy filesystem scans in sequence: one for exposed secrets, one for vulnerabilities. Results are printed as a table in the job log.
 
 ```yaml
 # .github/workflows/security-scan.yml
@@ -46,67 +46,29 @@ on:
 
 jobs:
   trivy:
-    uses: neralake/.github/.github/workflows/trivy-scan.yml@main
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: neralake/.github/actions/trivy-scan@main
 ```
 
 **Inputs** (all optional — defaults shown):
 
 | Input | Default | Description |
 |---|---|---|
-| `severity` | `CRITICAL,HIGH` | Severities to report |
+| `severity` | `CRITICAL,HIGH` | Severities to report for the vulnerability scan |
 | `exit-code` | `0` | `0` = advisory only; `1` = fail the job on findings |
 | `ignore-unfixed` | `true` | Skip vulnerabilities with no available fix |
-| `scan-ref` | `.` | Subdirectory to scan |
-| `trivy-version` | `0.61.0` | Trivy release to use |
+| `scan-ref` | `.` | Path to scan for secrets (and vulnerabilities if `vuln-scan-ref` is not set) |
+| `vuln-scan-ref` | _(scan-ref)_ | Override the path for the vulnerability scan only |
 
 **Example with stricter enforcement:**
 
 ```yaml
-jobs:
-  trivy:
-    uses: neralake/.github/.github/workflows/trivy-scan.yml@main
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    with:
-      exit-code: 1
-      severity: 'CRITICAL,HIGH,MEDIUM'
-```
-
-> **Note:** SARIF upload to the Security tab requires GitHub Advanced Security on private repositories. Without it, the upload step will fail but the scan itself will still run.
-
----
-
-## Reusable Actions
-
-### `pr-size-check` — Enforce PR Size
-
-Fails a job if the number of added lines in a pull request exceeds a configurable limit. Use this to encourage smaller, reviewable PRs.
-
-```yaml
-# .github/workflows/compliance.yml
-name: Compliance Checks
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-jobs:
-  check-pr-size:
-    runs-on: ubuntu-latest
     steps:
-      - uses: neralake/.github/actions/pr-size-check@main
+      - uses: actions/checkout@v6
+      - uses: neralake/.github/actions/trivy-scan@main
         with:
-          max_lines_changed: 1000   # optional, default: 1200
+          exit-code: 1
+          severity: 'CRITICAL,HIGH,MEDIUM'
 ```
-
-**Inputs:**
-
-| Input | Default | Description |
-|---|---|---|
-| `max_lines_changed` | `1200` | Maximum added lines before the check fails |
-| `github_token` | `github.token` | Token used to fetch PR stats |
