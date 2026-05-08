@@ -28,11 +28,10 @@ on:
         required: false
         type: string
         default: 'none'
-      # trivy-version:
-      #   description: 'Trivy version to use'
-      #   required: false
-      #   type: string
-      #   default: '0.61.0'
+    secrets:
+      node-auth-token:
+        description: 'Token for authenticating with private npm registries'
+        required: false
 
 jobs:
   trivy-scan:
@@ -55,6 +54,8 @@ jobs:
       - name: Install dependencies (npm)
         if: inputs.package-manager == 'npm'
         run: npm ci --ignore-scripts
+        env:
+          CLASSIC_GITHUB_TOKEN: ${{ secrets.node-auth-token }}
 
       # This is just an example for Python projects.
       # Customize this step for other package managers as needed, such as pnpm.
@@ -67,7 +68,6 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: ${{ inputs.scan-ref }}
-          # trivy-version: ${{ inputs.trivy-version }}
           severity: ${{ inputs.severity }}
           exit-code: ${{ inputs.exit-code }}
           ignore-unfixed: ${{ inputs.ignore-unfixed }}
