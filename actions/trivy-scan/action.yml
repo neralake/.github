@@ -29,7 +29,7 @@ runs:
     - name: Cache Trivy vulnerability database
       uses: actions/cache@v5
       with:
-        path: ~/.cache/trivy
+        path: ${{ github.workspace }}/.trivy-cache
         key: trivy-db-${{ runner.os }}-${{ github.run_id }}
         restore-keys: trivy-db-${{ runner.os }}-
 
@@ -39,7 +39,7 @@ runs:
         scan-type: 'fs'
         scan-ref: ${{ inputs.scan-ref }}
         scanners: 'secret'
-        cache-dir: ~/.cache/trivy
+        cache-dir: ${{ github.workspace }}/.trivy-cache
         format: 'table'
 
     - name: Scan for vulnerabilities
@@ -51,5 +51,5 @@ runs:
         severity: ${{ inputs.severity }}
         exit-code: ${{ inputs.exit-code }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
-        cache-dir: ~/.cache/trivy
+        cache-dir: ${{ github.workspace }}/.trivy-cache
         format: 'table'
