@@ -26,7 +26,11 @@ runs:
     - name: Annotate findings and write job summary
       shell: bash
       run: |
+        echo "CodeQL results directory:"
+        ls -la "${{ runner.temp }}/codeql-results/" 2>&1 || echo "(directory not found)"
+
         SARIF_FILE=$(find "${{ runner.temp }}/codeql-results" -name "*.sarif" 2>/dev/null | head -1)
+        echo "SARIF file: ${SARIF_FILE:-<none>}"
 
         {
           echo "## CodeQL Security Scan"
@@ -41,33 +45,30 @@ runs:
           exit 0
         fi
 
-        # CodeQL SARIF results may omit .level on the result, deferring to the rule's
-        # defaultConfiguration.level. Build a ruleId→level map and fall back to it.
-        RULE_LEVEL_MAP=$(jq '
-          [.runs[].tool.driver.rules[]? |
-            {key: .id, value: (.defaultConfiguration.level // "note")}] | from_entries
-        ' "$SARIF_FILE")
+        # CodeQL SARIF results carry no .level on the result object — the level lives on
+        # the rule definition, reachable via ruleIndex. Parse everything in one jq pass.
+        COUNTS=$(jq -r '
+          .runs[0] |
+          (.tool.driver.rules // []) as $rules |
+          [.results[] |
+            (.level // $rules[.ruleIndex // -1]?.defaultConfiguration.level // "note")] |
+          {
+            error:   (map(select(. == "error"))   | length),
+            warning: (map(select(. == "warning")) | length),
+            note:    (map(select(. == "note"))    | length)
+          } |
+          "\(.error) \(.warning) \(.note)"
+        ' "$SARIF_FILE" 2>/dev/null) || COUNTS="0 0 0"
+        COUNTS=${COUNTS:-"0 0 0"}
 
-        ERROR_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
-          [.runs[].results[] |
-            (.level // $rl[.ruleId] // "note") |
-            select(. == "error")] | length
-        ' "$SARIF_FILE")
+        read -r ERROR_COUNT WARNING_COUNT NOTE_COUNT <<< "$COUNTS"
 
-        WARNING_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
-          [.runs[].results[] |
-            (.level // $rl[.ruleId] // "note") |
-            select(. == "warning")] | length
-        ' "$SARIF_FILE")
-
-        NOTE_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
-          [.runs[].results[] |
-            (.level // $rl[.ruleId] // "note") |
-            select(. == "note")] | length
-        ' "$SARIF_FILE")
-
-        jq -r --argjson rl "$RULE_LEVEL_MAP" '.runs[].results[] |
-          (.level // $rl[.ruleId] // "note") as $level |
+        # Emit workflow annotations
+        jq -r '
+          .runs[0] |
+          (.tool.driver.rules // []) as $rules |
+          .results[] |
+          (.level // $rules[.ruleIndex // -1]?.defaultConfiguration.level // "note") as $level |
           (.locations[0].physicalLocation.artifactLocation.uri // "unknown") as $file |
           (.locations[0].physicalLocation.region.startLine // 1) as $line |
           (.ruleId // "unknown") as $rule |
@@ -78,7 +79,7 @@ runs:
             "::warning file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
           else
             "::notice file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
-          end' "$SARIF_FILE"
+          end' "$SARIF_FILE" 2>/dev/null || true
 
         {
           echo "| Severity | Count |"
