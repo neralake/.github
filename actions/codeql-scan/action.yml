@@ -22,24 +22,52 @@ runs:
         category: /language:javascript-typescript
         output: ${{ runner.temp }}/codeql-results
         upload: false
-        add-snippet: true
 
     - name: Annotate findings and write job summary
       shell: bash
       run: |
-        SARIF_FILE=$(find "${{ runner.temp }}/codeql-results" -name "*.sarif" | head -1)
+        SARIF_FILE=$(find "${{ runner.temp }}/codeql-results" -name "*.sarif" 2>/dev/null | head -1)
+
+        {
+          echo "## CodeQL Security Scan"
+          echo ""
+          echo "Query suite: \`security-extended\` (JavaScript/TypeScript)"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
 
         if [ ! -f "$SARIF_FILE" ]; then
+          echo "No SARIF output found." >> "$GITHUB_STEP_SUMMARY"
           echo "No SARIF output found — skipping annotation."
           exit 0
         fi
 
-        ERROR_COUNT=$(jq '[.runs[].results[] | select(.level == "error")] | length' "$SARIF_FILE")
-        WARNING_COUNT=$(jq '[.runs[].results[] | select(.level == "warning")] | length' "$SARIF_FILE")
-        NOTE_COUNT=$(jq '[.runs[].results[] | select(.level == "note" or .level == null)] | length' "$SARIF_FILE")
+        # CodeQL SARIF results may omit .level on the result, deferring to the rule's
+        # defaultConfiguration.level. Build a ruleId→level map and fall back to it.
+        RULE_LEVEL_MAP=$(jq '
+          [.runs[].tool.driver.rules[]? |
+            {key: .id, value: (.defaultConfiguration.level // "note")}] | from_entries
+        ' "$SARIF_FILE")
 
-        jq -r '.runs[].results[] |
-          (.level // "note") as $level |
+        ERROR_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
+          [.runs[].results[] |
+            (.level // $rl[.ruleId] // "note") |
+            select(. == "error")] | length
+        ' "$SARIF_FILE")
+
+        WARNING_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
+          [.runs[].results[] |
+            (.level // $rl[.ruleId] // "note") |
+            select(. == "warning")] | length
+        ' "$SARIF_FILE")
+
+        NOTE_COUNT=$(jq --argjson rl "$RULE_LEVEL_MAP" '
+          [.runs[].results[] |
+            (.level // $rl[.ruleId] // "note") |
+            select(. == "note")] | length
+        ' "$SARIF_FILE")
+
+        jq -r --argjson rl "$RULE_LEVEL_MAP" '.runs[].results[] |
+          (.level // $rl[.ruleId] // "note") as $level |
           (.locations[0].physicalLocation.artifactLocation.uri // "unknown") as $file |
           (.locations[0].physicalLocation.region.startLine // 1) as $line |
           (.ruleId // "unknown") as $rule |
@@ -53,10 +81,6 @@ runs:
           end' "$SARIF_FILE"
 
         {
-          echo "## CodeQL Security Scan"
-          echo ""
-          echo "Query suite: \`security-extended\` (JavaScript/TypeScript)"
-          echo ""
           echo "| Severity | Count |"
           echo "|----------|-------|"
           echo "| High / Critical | $ERROR_COUNT |"
