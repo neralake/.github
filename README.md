@@ -72,3 +72,48 @@ jobs:
           exit-code: 1
           severity: 'CRITICAL,HIGH,MEDIUM'
 ```
+
+---
+
+### `codeql-scan` — SAST Security Analysis
+
+Runs CodeQL static analysis using the `security-extended` query suite, tuned for JavaScript/TypeScript back-end services (NestJS, Express, GraphQL). Catches logic-level vulnerabilities that dependency scanners miss: SQL/NoSQL injection, path traversal, SSRF, prototype pollution, ReDoS, and more.
+
+Findings are surfaced as **PR annotations** (visible in the Files Changed tab) and a **job summary table** — no GitHub Advanced Security subscription required.
+
+```yaml
+# .github/workflows/security-scan.yml
+name: Security Scan
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # required for CodeQL database upload
+    steps:
+      - uses: actions/checkout@v6
+      - uses: neralake/.github/actions/codeql-scan@main
+```
+
+**Inputs** (all optional — defaults shown):
+
+| Input | Default | Description |
+|---|---|---|
+| `exit-code` | `0` | `0` = advisory only; `1` = fail the job on high/critical findings |
+
+**Example with stricter enforcement:**
+
+```yaml
+    steps:
+      - uses: actions/checkout@v6
+      - uses: neralake/.github/actions/codeql-scan@main
+        with:
+          exit-code: '1'
+```
