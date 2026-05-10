@@ -1,0 +1,70 @@
+name: CodeQL Security Scan
+description: Scans JavaScript/TypeScript source for security vulnerabilities using CodeQL's security-extended query suite. Surfaces findings as PR annotations and a job summary. Designed for NestJS/Express/GraphQL back-end services.
+
+inputs:
+  exit-code:
+    description: 'Exit code when high/critical findings exist: 0 = advisory only, 1 = fail the job'
+    required: false
+    default: '0'
+
+runs:
+  using: composite
+  steps:
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4.35.4
+      with:
+        languages: javascript-typescript
+        queries: security-extended
+
+    - name: Run CodeQL analysis
+      uses: github/codeql-action/analyze@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4.35.4
+      with:
+        category: /language:javascript-typescript
+        output: ${{ runner.temp }}/codeql-results
+        upload: false
+        add-snippet: true
+
+    - name: Annotate findings and write job summary
+      shell: bash
+      run: |
+        SARIF_FILE=$(find "${{ runner.temp }}/codeql-results" -name "*.sarif" | head -1)
+
+        if [ ! -f "$SARIF_FILE" ]; then
+          echo "No SARIF output found — skipping annotation."
+          exit 0
+        fi
+
+        ERROR_COUNT=$(jq '[.runs[].results[] | select(.level == "error")] | length' "$SARIF_FILE")
+        WARNING_COUNT=$(jq '[.runs[].results[] | select(.level == "warning")] | length' "$SARIF_FILE")
+        NOTE_COUNT=$(jq '[.runs[].results[] | select(.level == "note" or .level == null)] | length' "$SARIF_FILE")
+
+        jq -r '.runs[].results[] |
+          (.level // "note") as $level |
+          (.locations[0].physicalLocation.artifactLocation.uri // "unknown") as $file |
+          (.locations[0].physicalLocation.region.startLine // 1) as $line |
+          (.ruleId // "unknown") as $rule |
+          (.message.text // "") as $msg |
+          if $level == "error" then
+            "::error file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
+          elif $level == "warning" then
+            "::warning file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
+          else
+            "::notice file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
+          end' "$SARIF_FILE"
+
+        {
+          echo "## CodeQL Security Scan"
+          echo ""
+          echo "Query suite: \`security-extended\` (JavaScript/TypeScript)"
+          echo ""
+          echo "| Severity | Count |"
+          echo "|----------|-------|"
+          echo "| High / Critical | $ERROR_COUNT |"
+          echo "| Medium | $WARNING_COUNT |"
+          echo "| Low / Info | $NOTE_COUNT |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "${{ inputs.exit-code }}" = "1" ] && [ "$ERROR_COUNT" -gt 0 ]; then
+          echo "CodeQL found $ERROR_COUNT high/critical finding(s). Failing job."
+          exit 1
+        fi

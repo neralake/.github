@@ -51,5 +51,6 @@ runs:
         severity: ${{ inputs.severity }}
         exit-code: ${{ inputs.exit-code }}
         ignore-unfixed: ${{ inputs.ignore-unfixed }}
+        trivyignores: ${{ github.action_path }}/.trivyignore.yaml
         cache-dir: ${{ github.workspace }}/.trivy-cache
         format: 'table'
