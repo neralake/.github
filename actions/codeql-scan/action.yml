@@ -46,17 +46,21 @@ runs:
         fi
 
         echo "Parsing SARIF..."
-        echo "  jq version: $(jq --version)"
-        echo "  result count: $(jq '.runs[0].results | length' "$SARIF_FILE")"
-        echo "  rule count:   $(jq '(.runs[0].tool.driver.rules // []) | length' "$SARIF_FILE")"
-        echo "  sample result level: $(jq -r '.runs[0].results[0].level // "(null)"' "$SARIF_FILE")"
-        echo "  sample rule level:   $(jq -r '(.runs[0].tool.driver.rules // [])[0].defaultConfiguration.level // "(null)"' "$SARIF_FILE")"
+        echo "  runs count:        $(jq '.runs | length' "$SARIF_FILE" 2>&1)"
+        echo "  result count:      $(jq '.runs[0].results | length' "$SARIF_FILE" 2>&1)"
+        echo "  driver rule count: $(jq '(.runs[0].tool.driver.rules // []) | length' "$SARIF_FILE" 2>&1)"
+        echo "  extensions count:  $(jq '(.runs[0].tool.extensions // []) | length' "$SARIF_FILE" 2>&1)"
+        echo "  ext[0] rule count: $(jq '(.runs[0].tool.extensions[0].rules // []) | length' "$SARIF_FILE" 2>&1)"
+        echo "  sample result[0]:  $(jq -c '.runs[0].results[0] | {ruleId,ruleIndex,level}' "$SARIF_FILE" 2>&1)"
 
-        # CodeQL SARIF results carry no .level on the result object — the level lives on
-        # the rule definition, reachable via ruleIndex. Parse everything in one jq pass.
+        # CodeQL SARIF results carry no .level on the result object. The level lives on
+        # the rule definition. Rules may be in tool.driver.rules or tool.extensions[].rules.
         COUNTS=$(jq -r '
           .runs[0] |
-          (.tool.driver.rules // []) as $rules |
+          (
+            (.tool.driver.rules // []) +
+            [.tool.extensions[]?.rules[]?]
+          ) as $rules |
           [.results[] |
             (.level // $rules[.ruleIndex].defaultConfiguration.level // "note")] |
           {
@@ -75,7 +79,10 @@ runs:
         # Emit workflow annotations
         jq -r '
           .runs[0] |
-          (.tool.driver.rules // []) as $rules |
+          (
+            (.tool.driver.rules // []) +
+            [.tool.extensions[]?.rules[]?]
+          ) as $rules |
           .results[] |
           (.level // $rules[.ruleIndex].defaultConfiguration.level // "note") as $level |
           (.locations[0].physicalLocation.artifactLocation.uri // "unknown") as $file |
@@ -90,6 +97,7 @@ runs:
             "::notice file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
           end' "$SARIF_FILE" 2>/dev/null || true
 
+        echo "Writing job summary..."
         {
           echo "| Severity | Count |"
           echo "|----------|-------|"
@@ -97,6 +105,7 @@ runs:
           echo "| Medium | $WARNING_COUNT |"
           echo "| Low / Info | $NOTE_COUNT |"
         } >> "$GITHUB_STEP_SUMMARY"
+        echo "Done."
 
         if [ "${{ inputs.exit-code }}" = "1" ] && [ "$ERROR_COUNT" -gt 0 ]; then
           echo "CodeQL found $ERROR_COUNT high/critical finding(s). Failing job."
