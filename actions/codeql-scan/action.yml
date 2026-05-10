@@ -26,11 +26,7 @@ runs:
     - name: Annotate findings and write job summary
       shell: bash
       run: |
-        echo "CodeQL results directory:"
-        ls -la "${{ runner.temp }}/codeql-results/" 2>&1 || echo "(directory not found)"
-
         SARIF_FILE=$(find "${{ runner.temp }}/codeql-results" -name "*.sarif" 2>/dev/null | head -1)
-        echo "SARIF file: ${SARIF_FILE:-<none>}"
 
         {
           echo "## CodeQL Security Scan"
@@ -44,14 +40,6 @@ runs:
           echo "No SARIF output found — skipping annotation."
           exit 0
         fi
-
-        echo "Parsing SARIF..."
-        echo "  runs count:        $(jq '.runs | length' "$SARIF_FILE" 2>&1)"
-        echo "  result count:      $(jq '.runs[0].results | length' "$SARIF_FILE" 2>&1)"
-        echo "  driver rule count: $(jq '(.runs[0].tool.driver.rules // []) | length' "$SARIF_FILE" 2>&1)"
-        echo "  extensions count:  $(jq '(.runs[0].tool.extensions // []) | length' "$SARIF_FILE" 2>&1)"
-        echo "  ext[0] rule count: $(jq '(.runs[0].tool.extensions[0].rules // []) | length' "$SARIF_FILE" 2>&1)"
-        echo "  sample result[0]:  $(jq -c '.runs[0].results[0] | {ruleId,ruleIndex,level}' "$SARIF_FILE" 2>&1)"
 
         # CodeQL SARIF results carry no .level on the result object. The level lives on
         # the rule definition. Rules may be in tool.driver.rules or tool.extensions[].rules.
@@ -69,12 +57,10 @@ runs:
             note:    (map(select(. == "note"))    | length)
           } |
           "\(.error) \(.warning) \(.note)"
-        ' "$SARIF_FILE" 2>&1) || COUNTS="0 0 0"
+        ' "$SARIF_FILE" 2>/dev/null) || COUNTS="0 0 0"
         COUNTS=${COUNTS:-"0 0 0"}
-        echo "Counts string: '$COUNTS'"
 
         read -r ERROR_COUNT WARNING_COUNT NOTE_COUNT <<< "$COUNTS"
-        echo "E=$ERROR_COUNT W=$WARNING_COUNT N=$NOTE_COUNT"
 
         # Emit workflow annotations
         jq -r '
@@ -97,7 +83,6 @@ runs:
             "::notice file=\($file),line=\($line),title=CodeQL: \($rule)::\($msg)"
           end' "$SARIF_FILE" 2>/dev/null || true
 
-        echo "Writing job summary..."
         {
           echo "| Severity | Count |"
           echo "|----------|-------|"
@@ -105,7 +90,6 @@ runs:
           echo "| Medium | $WARNING_COUNT |"
           echo "| Low / Info | $NOTE_COUNT |"
         } >> "$GITHUB_STEP_SUMMARY"
-        echo "Done."
 
         if [ "${{ inputs.exit-code }}" = "1" ] && [ "$ERROR_COUNT" -gt 0 ]; then
           echo "CodeQL found $ERROR_COUNT high/critical finding(s). Failing job."
