@@ -45,30 +45,39 @@ runs:
           exit 0
         fi
 
+        echo "Parsing SARIF..."
+        echo "  jq version: $(jq --version)"
+        echo "  result count: $(jq '.runs[0].results | length' "$SARIF_FILE")"
+        echo "  rule count:   $(jq '(.runs[0].tool.driver.rules // []) | length' "$SARIF_FILE")"
+        echo "  sample result level: $(jq -r '.runs[0].results[0].level // "(null)"' "$SARIF_FILE")"
+        echo "  sample rule level:   $(jq -r '(.runs[0].tool.driver.rules // [])[0].defaultConfiguration.level // "(null)"' "$SARIF_FILE")"
+
         # CodeQL SARIF results carry no .level on the result object — the level lives on
         # the rule definition, reachable via ruleIndex. Parse everything in one jq pass.
         COUNTS=$(jq -r '
           .runs[0] |
           (.tool.driver.rules // []) as $rules |
           [.results[] |
-            (.level // $rules[.ruleIndex // -1]?.defaultConfiguration.level // "note")] |
+            (.level // $rules[.ruleIndex].defaultConfiguration.level // "note")] |
           {
             error:   (map(select(. == "error"))   | length),
             warning: (map(select(. == "warning")) | length),
             note:    (map(select(. == "note"))    | length)
           } |
           "\(.error) \(.warning) \(.note)"
-        ' "$SARIF_FILE" 2>/dev/null) || COUNTS="0 0 0"
+        ' "$SARIF_FILE" 2>&1) || COUNTS="0 0 0"
         COUNTS=${COUNTS:-"0 0 0"}
+        echo "Counts string: '$COUNTS'"
 
         read -r ERROR_COUNT WARNING_COUNT NOTE_COUNT <<< "$COUNTS"
+        echo "E=$ERROR_COUNT W=$WARNING_COUNT N=$NOTE_COUNT"
 
         # Emit workflow annotations
         jq -r '
           .runs[0] |
           (.tool.driver.rules // []) as $rules |
           .results[] |
-          (.level // $rules[.ruleIndex // -1]?.defaultConfiguration.level // "note") as $level |
+          (.level // $rules[.ruleIndex].defaultConfiguration.level // "note") as $level |
           (.locations[0].physicalLocation.artifactLocation.uri // "unknown") as $file |
           (.locations[0].physicalLocation.region.startLine // 1) as $line |
           (.ruleId // "unknown") as $rule |
