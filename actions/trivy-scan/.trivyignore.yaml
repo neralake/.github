@@ -1,3 +1,5 @@
 vulnerabilities:
   - id: CVE-2022-38900
     statement: "Trivy false positive — decode-uri-component is not present in our code or dependency chain"
+  - id: CVE-2024-4068
+    statement: "Trivy false positive — only braces 3.0.3 (patched) is installed; versions 1.8.5 and 2.3.2 do not appear in the lockfile or node_modules"
