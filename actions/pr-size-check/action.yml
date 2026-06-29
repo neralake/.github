@@ -37,8 +37,8 @@ runs:
         echo "Total lines changed: $TOTAL"
         echo "Max allowed additions: $MAX_LINES"
 
-        if [ "$TOTAL" -gt "$ADDITIONS" ]; then
-          echo "::error::PR has $TOTAL lines changed, which exceeds the limit of $MAX_LINES. Please break this PR into smaller changes."
+        if [ "$TOTAL" -gt "$MAX_LINES" ]; then
+          echo "::error::PR has $TOTAL additions, which exceeds the limit of $MAX_LINES. Please break this PR into smaller changes."
           exit 1
         fi
 
