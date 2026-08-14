@@ -1,11 +1,15 @@
 name: PR Size Check
-description: Fails if a pull request exceeds the maximum allowed lines changed (additions + deletions).
+description: Fails if a pull request exceeds the maximum allowed additions, excluding dynamically specified file patterns.
 
 inputs:
   max_lines_changed:
-    description: Maximum total lines changed (additions + deletions) before the check fails.
+    description: Maximum total additions before the check fails.
     required: false
     default: "1200"
+  exclude_pattern:
+    description: Regex pattern of filenames to exclude from the additions count (e.g., '\.stories\.' or '\.stories\.|\\.svg$')
+    required: false
+    default: '\.stories\.'
   github_token:
     description: GitHub token used to fetch PR diff stats.
     required: false
@@ -18,7 +22,8 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        MAX_LINES: ${{ inputs.max_lines_changed }}
+        MAX_ADDITIONS: ${{ inputs.max_lines_changed }}
+        EXCLUDE_PATTERN: ${{ inputs.exclude_pattern }}
       run: |
         PR_NUMBER="${{ github.event.pull_request.number }}"
 
@@ -27,18 +32,24 @@ runs:
           exit 1
         fi
 
-        STATS=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUMBER" --jq '{additions, deletions}')
-        ADDITIONS=$(echo "$STATS" | jq '.additions')
-        DELETIONS=$(echo "$STATS" | jq '.deletions')
-        TOTAL=$((ADDITIONS))
+        # Fetch all files changed in the PR (using --paginate to handle large PRs safely)
+        FILES_JSON=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/files" --paginate)
 
-        echo "Additions: $ADDITIONS"
-        echo "Deletions: $DELETIONS"
-        echo "Total lines changed: $TOTAL"
-        echo "Max allowed additions: $MAX_LINES"
+        # Use jq to filter out files matching the EXCLUDE_PATTERN and sum the remaining additions
+        # We pass EXCLUDE_PATTERN safely as a jq variable using --arg
+        ADDITIONS=$(echo "$FILES_JSON" | jq -s --arg pattern "$EXCLUDE_PATTERN" '
+          flatten | 
+          map(select($pattern == "" or (.filename | test($pattern) | not))) | 
+          map(.additions) | 
+          add // 0
+        ')
 
-        if [ "$TOTAL" -gt "$MAX_LINES" ]; then
-          echo "::error::PR has $TOTAL additions, which exceeds the limit of $MAX_LINES. Please break this PR into smaller changes."
+        echo "Excluded pattern: $EXCLUDE_PATTERN"
+        echo "Total additions (filtered): $ADDITIONS"
+        echo "Max allowed additions: $MAX_ADDITIONS"
+
+        if [ "$ADDITIONS" -gt "$MAX_ADDITIONS" ]; then
+          echo "::error::PR has $ADDITIONS additions, which exceeds the limit of $MAX_ADDITIONS. Please break this PR into smaller changes."
           exit 1
         fi
 
