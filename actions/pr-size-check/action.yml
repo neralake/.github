@@ -9,7 +9,7 @@ inputs:
   exclude_pattern:
     description: Regex pattern of filenames to exclude from the additions count (e.g., '\.stories\.' or '\.stories\.|\\.svg$')
     required: false
-    default: '\.stories\.'
+    default: '\.stories\.|(^|/)package-lock\.json$'
   github_token:
     description: GitHub token used to fetch PR diff stats.
     required: false
