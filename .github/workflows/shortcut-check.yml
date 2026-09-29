@@ -15,7 +15,12 @@ jobs:
           SHORTCUT_TOKEN: ${{ secrets.SHORTCUT_API_TOKEN }}
         with:
           script: |
-            const pr = context.payload.pull_request;
+            // Fetch live PR data: re-runs replay the original event payload, so edits to the description would be missed.
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
 
             // 1. DEFINE REGEX
             // Group 1: story/123 or epic/123
