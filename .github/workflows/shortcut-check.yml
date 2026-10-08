@@ -7,7 +7,7 @@ on:
 
 jobs:
   validate-ticket-existence:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Verify Shortcut Ticket Exists
         uses: actions/github-script@v9
