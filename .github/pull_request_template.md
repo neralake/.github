@@ -1,26 +1,28 @@
-## 📝 Description
-<!-- Explain what you did. Why is this change necessary? What problem does it solve? -->
-<!-- Add link or number of the Shortcut ticket, if not in the branch name. -->
+# Description
 
-## Scope of Change
-<!-- Select the type of change (put an x in the brackets) -->
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Refactor (code improvement with no behavior change)
-- [ ] Documentation
-- [ ] Configuration Change (Infrastructure, Env vars, etc.)
+<!--Please include a summary of the changes and the related issue. Please also include relevant motivation and context. List any dependencies that are required for this change.-->
 
-## Test Plan
-<!-- How did you verify this change? Provide instructions so reviewers can reproduce. -->
-<!-- Attach screenshots or terminal output if applicable. -->
-1. Unit Tests:
-2. Manual Verification:
+<!--Fixes -- (issue)-->
 
-## Impact & Risks
-<!-- Does this change require database migrations? API version bumps? -->
-<!-- Is this a breaking change? -->
+Fixes -- ()
 
-## Verification
-- [ ] I have performed a self-review of my code.
-- [ ] I have added/updated tests for this change.
-- [ ] I have commented hard-to-understand areas.
-- [ ] The code/service runs locally as expected.
+# How Has This Been Tested?
+
+<!--Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce if needed. Please also list any relevant details if necessary for your test configuration-->
+
+- [ ] Test A
+- [ ] Test B
+
+# Checklist:
+
+<!--If an item is optional does not apply, remove it from the list.-->
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation [Optional]
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works [Optional]
+- [ ] New and existing unit tests pass locally with my changes
+- [ ] Any dependent changes have been merged and published in downstream modules [Optional]
+- [ ] I have create or updated the e2e tests to reflect my changes [Optional]
