@@ -29,6 +29,28 @@ jobs:
 
 ## Reusable Actions
 
+### `contract-codegen-check` — Contract Codegen Is Current
+
+Regenerates a consumer's contract code from `buf.build/neralake/contracts` and fails if the
+result differs from what is committed. Catches stale generated code and generated code that
+was hand-edited instead of changing the proto.
+
+**Requires:** `BUF_TOKEN` (a BSR token with read access to the org). Composite actions cannot
+read secrets, so it must be passed in. The calling job must already have run `setup-node` and
+installed dependencies — this action does neither.
+
+```yaml
+- uses: neralake/.github/actions/contract-codegen-check@main
+  with:
+    gen-dir: src/gen          # functions/shared/gen in serverless
+    buf-token: ${{ secrets.BUF_TOKEN }}
+```
+
+The module reference in each consumer's `buf.gen.yaml` is unpinned, so this compares against
+whatever the BSR holds *now*. A red result is therefore not always the PR author's fault — it
+also fires when someone else publishes a contract change. The failure message says so; keep
+that wording if you edit it, or the check gets written off as flaky.
+
 ### `trivy-scan` — Security Scanning
 
 Runs two Trivy filesystem scans in sequence: one for exposed secrets, one for vulnerabilities. Results are printed as a table in the job log.

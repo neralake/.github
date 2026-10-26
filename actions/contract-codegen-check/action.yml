@@ -1,0 +1,64 @@
+name: Contract Codegen Check
+description: Fails if a consumer's committed contract code does not match the protos published to the Buf Schema Registry. Catches both stale generated code and generated code that was hand-edited. Assumes Node and dependencies are already set up by the calling job.
+
+inputs:
+  gen-dir:
+    description: 'Directory holding generated contract code, e.g. src/gen'
+    required: true
+  buf-token:
+    description: 'Buf Schema Registry token with read access to the neralake org. Composite actions cannot read secrets, so this must be passed in explicitly.'
+    required: true
+  generate-script:
+    description: 'npm script that regenerates contract code'
+    required: false
+    default: 'contracts:generate'
+
+runs:
+  using: composite
+  steps:
+    - name: Check generated contract code is up to date
+      shell: bash
+      env:
+        BUF_TOKEN: ${{ inputs.buf-token }}
+        GEN_DIR: ${{ inputs.gen-dir }}
+        GENERATE_SCRIPT: ${{ inputs.generate-script }}
+      run: |
+        if [ -z "$BUF_TOKEN" ]; then
+          echo "::error::BUF_TOKEN is not set. buf.build/neralake/contracts is a private"
+          echo "::error::module, so an unauthenticated buf reports it as 'not found'."
+          echo "::error::Add a BSR token with read access to the neralake org as BUF_TOKEN."
+          exit 1
+        fi
+
+        if [ ! -d "$GEN_DIR" ]; then
+          echo "::error::gen-dir '$GEN_DIR' does not exist in this repository."
+          exit 1
+        fi
+
+        npm run "$GENERATE_SCRIPT"
+
+        # buf emits double-quoted strings while the committed files are
+        # prettier-formatted, so without this the diff is pure quote-style noise.
+        npx prettier --write "$GEN_DIR"
+
+        if git diff --exit-code -- "$GEN_DIR"; then
+          echo "Committed contract code matches the published protos."
+          exit 0
+        fi
+
+        {
+          echo "## Contract Codegen Check"
+          echo ""
+          echo "\`$GEN_DIR\` does not match the contract published to the BSR."
+          echo ""
+          echo "Run \`npm run $GENERATE_SCRIPT && npm run format\` and commit the result."
+          echo ""
+          echo '```diff'
+          git diff -- "$GEN_DIR" | head -200
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        echo "::error::Committed contract code does not match the published contract."
+        echo "::error::If you did not change $GEN_DIR, a contract change was published to the BSR by someone else."
+        echo "::error::Either way the fix is: npm run $GENERATE_SCRIPT && npm run format, then commit the result."
+        exit 1
