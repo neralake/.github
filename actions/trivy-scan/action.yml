@@ -34,7 +34,7 @@ runs:
         restore-keys: trivy-db-${{ runner.os }}-
 
     - name: Scan source code for secrets
-      uses: aquasecurity/trivy-action@latest
+      uses: aquasecurity/trivy-action@v0.76.2
       with:
         scan-type: "fs"
         scan-ref: ${{ inputs.scan-ref }}
@@ -44,7 +44,7 @@ runs:
         output: ${{ runner.temp }}/trivy-secrets.json
 
     - name: Scan for vulnerabilities
-      uses: aquasecurity/trivy-action@latest
+      uses: aquasecurity/trivy-action@v0.76.2
       with:
         scan-type: "fs"
         scan-ref: ${{ inputs.vuln-scan-ref || inputs.scan-ref }}
